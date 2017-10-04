@@ -1,0 +1,182 @@
+var noble = require('noble');
+var async = require('async');
+
+module.exports = function(RED) {
+	function ScannerNode(config) {
+		RED.nodes.createNode(this, config);
+		var node = this;
+		var context = node.context();
+
+		noble.on('scanStart', function() {
+			node.status({ fill: "blue", shape: "ring", text: "scanning" });
+			context.set('results', []);
+		});
+
+		noble.on('discover', function(peripheral) {
+			var results = context.get('results') || [];
+			results.push(peripheral);
+			context.set('results', results);
+		});
+
+		noble.on('scanStop', function() {
+			node.status({});
+			async.each(context.get('results'), function(peripheral, done) {
+				node.send({ payload: peripheral });
+				done();
+			}, null);
+		});
+
+		node.on('input', function(msg) {
+			noble.startScanning([], false, function(error) {
+				if (error) {
+					node.error(error);
+					node.status({ fill: "red", shape: "dot", text: error });
+				}
+			});
+
+			setTimeout(function() {
+				noble.stopScanning();
+			}, config.timeout);
+		});
+
+		node.on('close', function(done) {
+			noble.removeAllListeners();
+			noble.stopScanning();
+			done();
+		});
+
+	}
+	RED.nodes.registerType('scanner', ScannerNode);
+
+	function PeripheralNode(config) {
+		RED.nodes.createNode(this, config);
+		var node = this;
+
+		node.on('input', function(msg) {
+			var peripheral = msg.payload;
+
+			if (config.mac != peripheral.address) {
+				return;
+			}
+
+			peripheral.once('connect', function() {
+				node.status({ fill: "green", shape: "dot", text: "connected" });
+
+				peripheral.discoverServices([], function(error, services) {
+					if (error) {
+						node.status({ fill: "red", shape: "dot", text: "error finding services" });
+						return;
+					}
+					node.send({ _peripheral: peripheral, payload: services });
+				});
+
+				setTimeout(function() {
+					node.status({});
+					peripheral.disconnect();
+				}, config.timeout);
+			});
+
+			peripheral.connect(function(error) {
+				if (error) {
+					node.status({ fill: "red", shape: "dot", text: "error connecting" });
+				}
+			});
+		});
+
+		node.on('close', function(done) {
+			done();
+		});
+	}
+	RED.nodes.registerType('peripheral', PeripheralNode);
+
+	function ServiceNode(config) {
+		RED.nodes.createNode(this, config);
+		var node = this;
+
+		node.on('input', function(msg) {
+			var peripheral = msg._peripheral;
+			if (!peripheral) {
+				node.status({ fill: "red", shape: "dot", text: "expecting peripheral in payload" });
+				return;
+			}
+
+			peripheral.once('disconnect', function() {
+				node.status({});
+			});
+
+			async.eachSeries(msg.payload, function(service, done) {
+				service.discoverCharacteristics([], function(error, characteristics) {
+					if (error) {
+						node.log(error);
+					}
+					node.send({ _peripheral: peripheral, _service: service, payload: characteristics });
+					setTimeout(done, 500);
+				});
+			});
+		});
+	}
+	RED.nodes.registerType('service', ServiceNode);
+
+	function CharacteristicNode(config) {
+		RED.nodes.createNode(this, config);
+		var node = this;
+		var search = [];
+		if (config.uuid && config.uuid != "") {
+			search.push(config.uuid);
+		}
+
+		node.on('input', function(msg) {
+			var peripheral = msg._peripheral;
+			if (!peripheral) {
+				node.status({ fill: "red", shape: "dot", text: "expecting peripheral in payload" });
+				return;
+			}
+
+			var service = msg._service;
+			if (!service) {
+				node.status({ fill: "red", shape: "dot", text: "expecting service in payload" });
+				return;
+			}
+
+			function readCharacteristic(characteristic, done) {
+				if (characteristic.properties.join('').indexOf('read') < 0) {
+					done();
+					return;
+				}
+
+				characteristic.read(function(error, data) {
+					if (error) {
+						node.status({ fill: "red", shape: "dot", text: "error reading" });
+						done();
+						return;
+					}
+
+					var payload = {};
+					payload.characteristic = characteristic;
+					payload.data = data;
+					if (data.length == 4) {
+						payload.dataInt = data.readInt32LE();
+						payload.dataFloat = data.readFloatLE();
+					}
+					node.send({ payload: payload });
+					setTimeout(done, 500);
+				});
+			}
+
+			node.status({ fill: "green", shape: "dot", text: "reading" });
+
+			async.filter(msg.payload,
+				function(characteristic, done) {
+					done(null, characteristic.uuid === config.uuid);
+				},
+				function(error, characteristics) {
+					async.eachSeries(characteristics, readCharacteristic, function() {
+						node.log("done reading from " + peripheral.address);
+						node.status({});
+					});
+				}
+			);
+		});
+	}
+	RED.nodes.registerType('characteristic', CharacteristicNode);
+}

@@ -1,0 +1,153 @@
+<script type="text/javascript">
+	RED.nodes.registerType('scanner', {
+		category: 'Bluetooth',
+		color: '#a6bbcf',
+		defaults: {
+			name: {
+				value: ""
+			},
+			timeout: {
+				value: 5000,
+				validate: function(v) {
+					return v >= 5000;
+				},
+				required: true
+			}
+		},
+		inputs: 1,
+		outputs: 1,
+		icon: "bluetooth.png",
+		label: function() {
+			return this.name || "scanner";
+		}
+	});
+</script>
+
+<script type="text/x-red" data-template-name="scanner">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-timeout"><i class="icon-tag"></i> Scan time</label>
+        <input type="text" id="node-input-timeout" placeholder="Time in milliseconds">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="scanner">
+    <p>A BLE node that delivers peripherals in a payload.  Hook up a trigger to it and set the scan time!</p>
+</script>
+
+<script type="text/javascript">
+	RED.nodes.registerType('peripheral', {
+		category: 'Bluetooth',
+		color: '#a6bbcf',
+		defaults: {
+			name: {
+				value: ""
+			},
+			mac: {
+				value: ""
+			},
+			timeout: {
+				value: 10000,
+				validate: function(v) {
+					return v >= 5000;
+				},
+				required: true
+			}
+		},
+		inputs: 1,
+		outputs: 1,
+		icon: "bluetooth.png",
+		label: function() {
+			return this.name || "peripheral";
+		}
+	});
+</script>
+
+<script type="text/x-red" data-template-name="peripheral">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-mac"><i class="icon-tag"></i> MAC Address</label>
+        <input type="text" id="node-input-mac" placeholder="MAC Address">
+    </div>
+    <div class="form-row">
+        <label for="node-input-timeout"><i class="icon-tag"></i> Timeout</label>
+        <input type="text" id="node-input-timeout" placeholder="Timeout">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="peripheral">
+    <p>A BLE node that matches a peripheral with a MAC address, performs a connection and interrogates it for services.  Hook this up to a scanner!</p>
+</script>
+
+<script type="text/javascript">
+	RED.nodes.registerType('service', {
+		category: 'Bluetooth',
+		color: '#a6bbcf',
+		defaults: {
+			name: {
+				value: ""
+			}
+		},
+		inputs: 1,
+		outputs: 1,
+		icon: "bluetooth.png",
+		label: function() {
+			return this.name || "service";
+		}
+	});
+</script>
+
+<script type="text/x-red" data-template-name="service">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="service">
+    <p>A BLE node that shunts a peripheral's services to a characteristic node.  Hook this up to a peripheral!</p>
+</script>
+
+
+<script type="text/javascript">
+	RED.nodes.registerType('characteristic', {
+		category: 'Bluetooth',
+		color: '#a6bbcf',
+		defaults: {
+			name: {
+				value: ""
+			},
+			uuid: {
+				value: ""
+			}
+		},
+		inputs: 1,
+		outputs: 1,
+		icon: "bluetooth.png",
+		label: function() {
+			return this.name || this.uuid || "characteristic";
+		}
+	});
+</script>
+
+<script type="text/x-red" data-template-name="characteristic">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-uuid"><i class="icon-tag"></i> UUID</label>
+        <input type="text" id="node-input-uuid" placeholder="UUID">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="service">
+    <p>A BLE node that matches a service's characteristic by UUID.  Hook this up to a service!</p>
+</script>
+
