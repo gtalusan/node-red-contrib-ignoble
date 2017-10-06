@@ -7,26 +7,30 @@ module.exports = function(RED) {
 		var node = this;
 		var context = node.context();
 
-		noble.on('scanStart', function() {
+		function scanStart() {
 			node.status({ fill: "blue", shape: "ring", text: "scanning" });
 			context.set('results', []);
-		});
+		}
 
-		noble.on('discover', function(peripheral) {
+		function discover(peripheral) {
 			var results = context.get('results') || [];
 			results.push(peripheral);
 			context.set('results', results);
-		});
+		}
 
-		noble.on('scanStop', function() {
+		function scanStop() {
+			noble.removeListener('discover', discover);
 			node.status({});
-			async.each(context.get('results'), function(peripheral, done) {
+			async.eachSeries(context.get('results'), function(peripheral, done) {
 				node.send({ payload: peripheral });
 				done();
 			}, null);
-		});
+		}
 
 		node.on('input', function(msg) {
+			noble.once('scanStart', scanStart);
+			noble.on('discover', discover);
+			noble.once('scanStop', scanStop);
 			noble.startScanning([], false, function(error) {
 				if (error) {
 					node.error(error);
@@ -40,7 +44,9 @@ module.exports = function(RED) {
 		});
 
 		node.on('close', function(done) {
-			noble.removeAllListeners();
+			noble.removeListener('scanStart', scanStart);
+			noble.removeListener('discover', discover);
+			noble.removeListener('scanStop', scanStop);
 			noble.stopScanning();
 			done();
 		});
@@ -59,7 +65,12 @@ module.exports = function(RED) {
 				return;
 			}
 
-			peripheral.once('connect', function() {
+			peripheral.connect(function(error) {
+				if (error) {
+					node.status({ fill: "red", shape: "dot", text: "error connecting" });
+					return;
+				}
+
 				node.status({ fill: "green", shape: "dot", text: "connected" });
 
 				peripheral.discoverServices([], function(error, services) {
@@ -74,12 +85,6 @@ module.exports = function(RED) {
 					node.status({});
 					peripheral.disconnect();
 				}, config.timeout);
-			});
-
-			peripheral.connect(function(error) {
-				if (error) {
-					node.status({ fill: "red", shape: "dot", text: "error connecting" });
-				}
 			});
 		});
 
