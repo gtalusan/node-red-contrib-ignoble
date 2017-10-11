@@ -22,7 +22,7 @@ module.exports = function(RED) {
 			noble.removeListener('discover', discover);
 			node.status({});
 			async.eachSeries(context.get('results'), function(peripheral, done) {
-				node.send({ payload: peripheral });
+				node.send({ _peripheral: peripheral });
 				done();
 			}, null);
 		}
@@ -59,10 +59,14 @@ module.exports = function(RED) {
 		var node = this;
 
 		node.on('input', function(msg) {
-			var peripheral = msg.payload;
+			var peripheral = msg._peripheral;
 
 			if (config.mac != peripheral.address) {
 				return;
+			}
+
+			if (config.name) {
+				msg._name = config.name;
 			}
 
 			peripheral.connect(function(error) {
@@ -78,7 +82,8 @@ module.exports = function(RED) {
 						node.status({ fill: "red", shape: "dot", text: "error finding services" });
 						return;
 					}
-					node.send({ _peripheral: peripheral, payload: services });
+					msg._services = services;
+					node.send(msg);
 				});
 
 				setTimeout(function() {
@@ -109,12 +114,14 @@ module.exports = function(RED) {
 				node.status({});
 			});
 
-			async.eachSeries(msg.payload, function(service, done) {
+			async.eachSeries(msg._services, function(service, done) {
 				service.discoverCharacteristics([], function(error, characteristics) {
 					if (error) {
 						node.log(error);
 					}
-					node.send({ _peripheral: peripheral, _service: service, payload: characteristics });
+					msg._service = service;
+					msg._characteristics = characteristics;
+					node.send(msg);
 					setTimeout(done, 500);
 				});
 			});
@@ -163,14 +170,15 @@ module.exports = function(RED) {
 						payload.dataInt = data.readInt32LE();
 						payload.dataFloat = data.readFloatLE();
 					}
-					node.send({ payload: payload });
+					msg.payload = payload;
+					node.send(msg);
 					setTimeout(done, 500);
 				});
 			}
 
 			node.status({ fill: "green", shape: "dot", text: "reading" });
 
-			async.filter(msg.payload,
+			async.filter(msg._characteristics,
 				function(characteristic, done) {
 					done(null, characteristic.uuid === config.uuid);
 				},
