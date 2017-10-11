@@ -82,8 +82,7 @@
 </script>
 
 <script type="text/x-red" data-help-name="peripheral">
-    <p>A BLE node that matches a peripheral with a MAC address, performs a connection and interrogates it for services.  Hook this up to a scanner!</p>
-    <p>Set the timeout to 0 so that it will stay connected forever and you can subscribe to characteristic notification changes!</p>
+    <p>A BLE node that matches a peripheral with a MAC address, performs a connection and interrogates it for services.  Hook this up to a scanner! Set the timeout to 0 so that it will stay connected forever and you can subscribe to characteristic notification changes!</p>
 </script>
 
 <script type="text/javascript">
@@ -155,7 +154,42 @@
 </script>
 
 <script type="text/x-red" data-help-name="characteristic">
-    <p>A BLE node that matches a service's characteristic by UUID.  Hook this up to a service!</p>
-    <p>Remember, if you subscribe to a characteristic, it's helpful to set the peripheral timeout to 0!</p>
+    <p>A BLE node that matches a service's characteristic by UUID.  Hook this up to a service! Remember, if you subscribe to a characteristic, it's helpful to set the peripheral timeout to 0!</p>
 </script>
 
+<script type="text/javascript">
+	RED.nodes.registerType('characteristic out', {
+		category: 'Bluetooth',
+		color: '#a6bbcf',
+		defaults: {
+			name: {
+				value: ""
+			},
+			uuid: {
+				value: ""
+			}
+		},
+		align: 'right',
+		inputs: 1,
+		outputs: 0,
+		icon: "bluetooth.png",
+		label: function() {
+			return this.name || this.uuid || "characteristic";
+		}
+	});
+</script>
+
+<script type="text/x-red" data-template-name="characteristic out">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-uuid"><i class="icon-tag"></i> UUID</label>
+        <input type="text" id="node-input-uuid" placeholder="UUID">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="characteristic out">
+    <p>A BLE node that matches a service's characteristic by UUID.  Hook this up to a service! You can use this node to write msg.payload to the characteristic!  Make sure that the characteristic on your BLE peripheral has enough room for the data contained in msg.payload!</p>
+</script>
