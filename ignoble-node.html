@@ -52,7 +52,7 @@
 			timeout: {
 				value: 10000,
 				validate: function(v) {
-					return v >= 5000;
+					return v >= 0;
 				},
 				required: true
 			}
@@ -83,6 +83,7 @@
 
 <script type="text/x-red" data-help-name="peripheral">
     <p>A BLE node that matches a peripheral with a MAC address, performs a connection and interrogates it for services.  Hook this up to a scanner!</p>
+    <p>Set the timeout to 0 so that it will stay connected forever and you can subscribe to characteristic notification changes!</p>
 </script>
 
 <script type="text/javascript">
@@ -114,7 +115,6 @@
     <p>A BLE node that shunts a peripheral's services to a characteristic node.  Hook this up to a peripheral!</p>
 </script>
 
-
 <script type="text/javascript">
 	RED.nodes.registerType('characteristic', {
 		category: 'Bluetooth',
@@ -125,6 +125,9 @@
 			},
 			uuid: {
 				value: ""
+			},
+			subscribe: {
+				value: false
 			}
 		},
 		inputs: 1,
@@ -145,9 +148,14 @@
         <label for="node-input-uuid"><i class="icon-tag"></i> UUID</label>
         <input type="text" id="node-input-uuid" placeholder="UUID">
     </div>
+    <div class="form-row">
+        <label for="node-input-subscribe"><i class="icon-tag"></i> Subscribe</label>
+        <input type="checkbox" id="node-input-subscribe" placeholder="Subscribe">
+    </div>
 </script>
 
-<script type="text/x-red" data-help-name="service">
+<script type="text/x-red" data-help-name="characteristic">
     <p>A BLE node that matches a service's characteristic by UUID.  Hook this up to a service!</p>
+    <p>Remember, if you subscribe to a characteristic, it's helpful to set the peripheral timeout to 0!</p>
 </script>
 

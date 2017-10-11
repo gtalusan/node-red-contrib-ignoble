@@ -50,7 +50,6 @@ module.exports = function(RED) {
 			noble.stopScanning();
 			done();
 		});
-
 	}
 	RED.nodes.registerType('scanner', ScannerNode);
 
@@ -86,10 +85,17 @@ module.exports = function(RED) {
 					node.send(msg);
 				});
 
-				setTimeout(function() {
-					node.status({});
-					peripheral.disconnect();
-				}, config.timeout);
+				if (config.timeout > 0) {
+					setTimeout(function() {
+						node.status({});
+						peripheral.disconnect();
+					}, config.timeout);
+				}
+				else {
+					peripheral.once('disconnect', function() {
+						node.status({ fill: "red", shape: "dot", text: "disconnected" });
+					});
+				}
 			});
 		});
 
@@ -150,11 +156,55 @@ module.exports = function(RED) {
 				return;
 			}
 
+			function sendPayload(data) {
+				var payload = {};
+				payload.data = data;
+				if (data.length == 4) {
+					payload.dataInt = data.readInt32LE();
+					payload.dataFloat = data.readFloatLE();
+				}
+				msg.payload = payload;
+				node.send(msg);
+			}
+
+			function subscribeCharacteristic(characteristic, done) {
+				if (characteristic.properties.join('').indexOf('notify') < 0) {
+					done();
+					return;
+				}
+
+				node.status({ fill: "green", shape: "dot", text: "subscribing" });
+
+				peripheral.once('disconnect', function() {
+					node.status({});
+				});
+
+				characteristic.subscribe(function(error) {
+					if (error) {
+						node.status({ fill: "red", shape: "dot", text: "error subscribing" });
+						done();
+						return;
+					}
+					characteristic.on('data', function(data, isNotification) {
+						if (!isNotification) {
+							node.status({});
+							return;
+						}
+
+						node.status({ fill: "blue", shape: "dot", text: "subscribed" });
+						sendPayload(data);
+					});
+					done();
+				});
+			}
+
 			function readCharacteristic(characteristic, done) {
 				if (characteristic.properties.join('').indexOf('read') < 0) {
 					done();
 					return;
 				}
+
+				node.status({ fill: "green", shape: "dot", text: "reading" });
 
 				characteristic.read(function(error, data) {
 					if (error) {
@@ -163,28 +213,23 @@ module.exports = function(RED) {
 						return;
 					}
 
-					var payload = {};
-					payload.characteristic = characteristic;
-					payload.data = data;
-					if (data.length == 4) {
-						payload.dataInt = data.readInt32LE();
-						payload.dataFloat = data.readFloatLE();
-					}
-					msg.payload = payload;
-					node.send(msg);
+					sendPayload(data);
 					setTimeout(done, 500);
 				});
 			}
 
-			node.status({ fill: "green", shape: "dot", text: "reading" });
-
 			async.filter(msg._characteristics,
 				function(characteristic, done) {
-					done(null, characteristic.uuid === config.uuid);
+					done(null, !config.uuid || config.uuid && characteristic.uuid === config.uuid);
 				},
 				function(error, characteristics) {
-					async.eachSeries(characteristics, readCharacteristic, function() {
-						node.log("done reading from " + peripheral.address);
+					async.eachSeries(characteristics, config.subscribe? subscribeCharacteristic : readCharacteristic, function() {
+						if (config.subscribe) {
+							node.log("done subscribing to " + peripheral.address);
+						}
+						else {
+							node.log("done reading from " + peripheral.address);
+						}
 						node.status({});
 					});
 				}
