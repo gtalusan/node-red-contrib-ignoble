@@ -23,3 +23,8 @@ Connect a service node to the peripheral node.  This node just transforms data. 
 Connect a characteristic node to the service node.  This node will let you fish out characteristic data.
 
 After the characteric node has run, msg.payload will contain its data - this can be shunted to other nodes like MQTT, Twitter or a debug node.
+
+## Example
+An example flow of two temperature sensors being scanned and characteristics exposed over Homebridge/MQTT.
+
+![alt text](./example.png "example flow")
