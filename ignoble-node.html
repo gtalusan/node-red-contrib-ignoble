@@ -58,7 +58,7 @@
 			}
 		},
 		inputs: 1,
-		outputs: 1,
+		outputs: 2,
 		icon: "bluetooth.png",
 		label: function() {
 			return this.name || "peripheral";
@@ -82,7 +82,33 @@
 </script>
 
 <script type="text/x-red" data-help-name="peripheral">
-    <p>A BLE node that matches a peripheral with a MAC address, performs a connection and interrogates it for services.  Hook this up to a scanner! Set the timeout to 0 so that it will stay connected forever and you can subscribe to characteristic notification changes!</p>
+    <p>A BLE node that matches a peripheral with a MAC address, performs a connection and interrogates it for services.</p>
+
+    <h3>Inputs</h3>
+        <dl class="message-properties">
+            <dt>payload <span class="property-type">object</span>
+            </dt>
+            <dd> the output of a scanner node</dd>
+        </dl>
+    <h3>Outputs</h3>
+        <ol class="node-ports">
+	    <li>connected
+                <dl class="message-properties">
+                    <dt>payload <span class="property-type">object</span>
+                    <dd> the output of a scanner node with this peripheral's services</dd>
+                </dl>
+            </li>
+            <li>disconnected
+                <dl class="message-properties">
+                    <dt>payload <span class="property-type">object</span>
+                    <dd> the output of a scanner node with this peripheral's services</dd>
+                </dl>
+            </li>
+        </ol>
+    <h3>Details</h3>
+	<p>Hook this up to a scanner!</p>
+        <p>Set the timeout to 0 so that it will stay connected forever and you can subscribe to characteristic notification changes!</p>
+	<p>Use the <code>disconnected</code> output port to re-trigger a scan in the case of an unwanted disconnection!</p>
 </script>
 
 <script type="text/javascript">

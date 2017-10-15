@@ -82,7 +82,7 @@ module.exports = function(RED) {
 						return;
 					}
 					msg._services = services;
-					node.send(msg);
+					node.send([ msg, null ]);
 				});
 
 				if (config.timeout > 0) {
@@ -98,6 +98,7 @@ module.exports = function(RED) {
 
 					peripheral.once('disconnect', function() {
 						node.status({ fill: "red", shape: "dot", text: "disconnected" });
+						node.send([ null, msg ]);
 					});
 				}
 			});
