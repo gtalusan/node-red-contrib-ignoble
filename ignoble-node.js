@@ -94,6 +94,7 @@ module.exports = function(RED) {
 				else {
 					node.on('close', function(done) {
 						peripheral.disconnect();
+						done();
 					});
 
 					peripheral.once('disconnect', function() {
