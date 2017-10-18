@@ -5,31 +5,18 @@ module.exports = function(RED) {
 	function ScannerNode(config) {
 		RED.nodes.createNode(this, config);
 		var node = this;
-		var context = node.context();
 
 		function scanStart() {
 			node.status({ fill: "blue", shape: "ring", text: "scanning" });
-			context.set('results', []);
-		}
-
-		function discover(peripheral) {
-			var results = context.get('results') || [];
-			results.push(peripheral);
-			context.set('results', results);
 		}
 
 		function scanStop() {
-			noble.removeListener('discover', discover);
 			node.status({});
-			async.eachSeries(context.get('results'), function(peripheral, done) {
-				node.send({ _peripheral: peripheral });
-				done();
-			}, null);
+			node.send({ _payload: 1 });
 		}
 
 		node.on('input', function(msg) {
 			noble.once('scanStart', scanStart);
-			noble.on('discover', discover);
 			noble.once('scanStop', scanStop);
 			noble.startScanning([], false, function(error) {
 				if (error) {
@@ -45,7 +32,6 @@ module.exports = function(RED) {
 
 		node.on('close', function(done) {
 			noble.removeListener('scanStart', scanStart);
-			noble.removeListener('discover', discover);
 			noble.removeListener('scanStop', scanStop);
 			noble.stopScanning();
 			done();
@@ -58,9 +44,17 @@ module.exports = function(RED) {
 		var node = this;
 
 		node.on('input', function(msg) {
-			var peripheral = msg._peripheral;
+			var peripheral;
 
-			if (config.mac != peripheral.address) {
+			for (var p in noble._peripherals) {
+				if (config.mac === noble._peripherals[p].address) {
+					peripheral = noble._peripherals[p];
+					break;
+				}
+			}
+
+			if (!peripheral) {
+				node.send([ null, msg ]);
 				return;
 			}
 
@@ -71,16 +65,31 @@ module.exports = function(RED) {
 			peripheral.connect(function(error) {
 				if (error) {
 					node.status({ fill: "red", shape: "dot", text: "error connecting" });
+					node.send([ null, msg ]);
 					return;
 				}
+
+				node.on('close', function(done) {
+					peripheral.disconnect();
+					done();
+				});
+
+				peripheral.once('disconnect', function() {
+					if (config.timeout == 0) {
+						node.status({ fill: "red", shape: "dot", text: "disconnected" });
+					}
+					node.send([ null, msg ]);
+				});
 
 				node.status({ fill: "green", shape: "dot", text: "connected" });
 
 				peripheral.discoverServices([], function(error, services) {
 					if (error) {
 						node.status({ fill: "red", shape: "dot", text: "error finding services" });
+						node.send([ null, msg ]);
 						return;
 					}
+					msg._peripheral = peripheral;
 					msg._services = services;
 					node.send([ msg, null ]);
 				});
@@ -90,17 +99,6 @@ module.exports = function(RED) {
 						node.status({});
 						peripheral.disconnect();
 					}, config.timeout);
-				}
-				else {
-					node.on('close', function(done) {
-						peripheral.disconnect();
-						done();
-					});
-
-					peripheral.once('disconnect', function() {
-						node.status({ fill: "red", shape: "dot", text: "disconnected" });
-						node.send([ null, msg ]);
-					});
 				}
 			});
 		});

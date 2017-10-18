@@ -35,7 +35,7 @@
 </script>
 
 <script type="text/x-red" data-help-name="scanner">
-    <p>A BLE node that delivers peripherals in a payload.  Hook up a trigger to it and set the scan time!</p>
+    <p>A node that performs a BLE scan for peripherals in the vicinity.  Hook up a trigger to it and set the scan time!</p>
 </script>
 
 <script type="text/javascript">
@@ -94,21 +94,21 @@
         <ol class="node-ports">
 	    <li>connected
                 <dl class="message-properties">
-                    <dt>payload <span class="property-type">object</span>
-                    <dd> the output of a scanner node with this peripheral's services</dd>
+		    <dt />
+                    <dd> this port is called when services have been discovered</dd>
                 </dl>
             </li>
             <li>disconnected
                 <dl class="message-properties">
-                    <dt>payload <span class="property-type">object</span>
-                    <dd> the output of a scanner node with this peripheral's services</dd>
+		    <dt />
+                    <dd> this port is called when the peripheral has been disconnected</dd>
                 </dl>
             </li>
         </ol>
     <h3>Details</h3>
 	<p>Hook this up to a scanner!</p>
         <p>Set the timeout to 0 so that it will stay connected forever and you can subscribe to characteristic notification changes!</p>
-	<p>Use the <code>disconnected</code> output port to re-trigger a scan in the case of an unwanted disconnection!</p>
+	<p>Use the <code>disconnected</code> output port to re-trigger a scan in the case of an unwanted disconnection, or to connect to another peripheral!</p>
 </script>
 
 <script type="text/javascript">
