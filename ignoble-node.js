@@ -89,8 +89,7 @@ module.exports = function(RED) {
 						node.send([ null, msg ]);
 						return;
 					}
-					msg._peripheral = peripheral;
-					msg._services = services;
+					msg._peripheral = peripheral.id;
 					node.send([ msg, null ]);
 				});
 
@@ -114,9 +113,14 @@ module.exports = function(RED) {
 		var node = this;
 
 		node.on('input', function(msg) {
-			var peripheral = msg._peripheral;
-			if (!peripheral) {
+			if (!msg._peripheral) {
 				node.status({ fill: "red", shape: "dot", text: "expecting peripheral in payload" });
+				return;
+			}
+
+			var peripheral = noble._peripherals[msg._peripheral];
+			if (!peripheral) {
+				node.status({ fill: "red", shape: "dot", text: "expecting peripheral in noble" });
 				return;
 			}
 
@@ -124,7 +128,7 @@ module.exports = function(RED) {
 				node.status({});
 			});
 
-			async.eachSeries(msg._services, function(service, done) {
+			async.eachSeries(peripheral.services, function(service, done) {
 				service.discoverCharacteristics([], function(error, characteristics) {
 					if (error) {
 						node.log(error);
@@ -148,9 +152,14 @@ module.exports = function(RED) {
 		}
 
 		node.on('input', function(msg) {
-			var peripheral = msg._peripheral;
-			if (!peripheral) {
+			if (!msg._peripheral) {
 				node.status({ fill: "red", shape: "dot", text: "expecting peripheral in payload" });
+				return;
+			}
+
+			var peripheral = noble._peripherals[msg._peripheral];
+			if (!peripheral) {
+				node.status({ fill: "red", shape: "dot", text: "expecting peripheral in noble" });
 				return;
 			}
 
@@ -250,9 +259,14 @@ module.exports = function(RED) {
 		}
 
 		node.on('input', function(msg) {
-			var peripheral = msg._peripheral;
-			if (!peripheral) {
+			if (!msg._peripheral) {
 				node.status({ fill: "red", shape: "dot", text: "expecting peripheral in payload" });
+				return;
+			}
+
+			var peripheral = noble._peripherals[msg._peripheral];
+			if (!peripheral) {
+				node.status({ fill: "red", shape: "dot", text: "expecting peripheral in noble" });
 				return;
 			}
 
