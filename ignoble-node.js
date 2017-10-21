@@ -62,8 +62,16 @@ module.exports = function(RED) {
 				msg._name = config.name;
 			}
 
+			msg._peripheral = peripheral.id;
+
+			if (peripheral.state == 'connected') {
+				node.send([ msg, null ]);
+				return;
+			}
+
 			peripheral.connect(function(error) {
 				if (error) {
+					node.log(error);
 					node.status({ fill: "red", shape: "dot", text: "error connecting" });
 					node.send([ null, msg ]);
 					return;
@@ -89,7 +97,6 @@ module.exports = function(RED) {
 						node.send([ null, msg ]);
 						return;
 					}
-					msg._peripheral = peripheral.id;
 					node.send([ msg, null ]);
 				});
 
@@ -133,9 +140,9 @@ module.exports = function(RED) {
 					if (error) {
 						node.log(error);
 					}
-					msg._service = service;
-					msg._characteristics = characteristics;
-					node.send(msg);
+					var m = Object.assign({}, msg);
+					m._service = service.uuid;
+					node.send(m);
 					setTimeout(done, 500);
 				});
 			});
@@ -146,10 +153,6 @@ module.exports = function(RED) {
 	function CharacteristicNode(config) {
 		RED.nodes.createNode(this, config);
 		var node = this;
-		var search = [];
-		if (config.uuid && config.uuid != "") {
-			search.push(config.uuid);
-		}
 
 		node.on('input', function(msg) {
 			if (!msg._peripheral) {
@@ -163,11 +166,25 @@ module.exports = function(RED) {
 				return;
 			}
 
-			var service = msg._service;
-			if (!service) {
+			if (!msg._service) {
 				node.status({ fill: "red", shape: "dot", text: "expecting service in payload" });
 				return;
 			}
+
+			var service = noble._services[peripheral.id][msg._service];
+			if (!service) {
+				node.status({ fill: "red", shape: "dot", text: "expecting service in noble" });
+				return;
+			}
+
+			var characteristic = noble._characteristics[peripheral.id][msg._service][config.uuid];
+			if (!characteristic) {
+				return;
+			}
+
+			peripheral.once('disconnect', function() {
+				node.status({});
+			});
 
 			function sendPayload(data) {
 				var payload = {};
@@ -176,26 +193,21 @@ module.exports = function(RED) {
 					payload.dataInt = data.readInt32LE();
 					payload.dataFloat = data.readFloatLE();
 				}
+				msg._characteristic = characteristic.uuid;
 				msg.payload = payload;
 				node.send(msg);
 			}
 
-			function subscribeCharacteristic(characteristic, done) {
+			function subscribe() {
 				if (characteristic.properties.join('').indexOf('notify') < 0) {
-					done();
 					return;
 				}
 
 				node.status({ fill: "green", shape: "dot", text: "subscribing" });
 
-				peripheral.once('disconnect', function() {
-					node.status({});
-				});
-
 				characteristic.subscribe(function(error) {
 					if (error) {
 						node.status({ fill: "red", shape: "dot", text: "error subscribing" });
-						done();
 						return;
 					}
 					characteristic.on('data', function(data, isNotification) {
@@ -207,16 +219,11 @@ module.exports = function(RED) {
 						node.status({ fill: "blue", shape: "dot", text: "subscribed" });
 						sendPayload(data);
 					});
-
-					done();
-
-					node.log("done subscribing to " + peripheral.address);
 				});
 			}
 
-			function readCharacteristic(characteristic, done) {
+			function read() {
 				if (characteristic.properties.join('').indexOf('read') < 0) {
-					done();
 					return;
 				}
 
@@ -225,27 +232,20 @@ module.exports = function(RED) {
 				characteristic.read(function(error, data) {
 					if (error) {
 						node.status({ fill: "red", shape: "dot", text: "error reading" });
-						done();
 						return;
 					}
 
 					sendPayload(data);
-					setTimeout(done, 500);
-
-					node.log("done reading from " + peripheral.address);
+					node.status({});
 				});
 			}
 
-			async.filter(msg._characteristics,
-				function(characteristic, done) {
-					done(null, !config.uuid || config.uuid && characteristic.uuid === config.uuid);
-				},
-				function(error, characteristics) {
-					async.eachSeries(characteristics, config.subscribe? subscribeCharacteristic : readCharacteristic, function() {
-						node.status({});
-					});
-				}
-			);
+			if (config.subscribe) {
+				subscribe();
+			}
+			else {
+				read();
+			}
 		});
 	}
 	RED.nodes.registerType('characteristic', CharacteristicNode);
@@ -253,10 +253,6 @@ module.exports = function(RED) {
 	function WCharacteristicNode(config) {
 		RED.nodes.createNode(this, config);
 		var node = this;
-		var search = [];
-		if (config.uuid && config.uuid != "") {
-			search.push(config.uuid);
-		}
 
 		node.on('input', function(msg) {
 			if (!msg._peripheral) {
@@ -270,42 +266,36 @@ module.exports = function(RED) {
 				return;
 			}
 
-			var service = msg._service;
-			if (!service) {
+			if (!msg._service) {
 				node.status({ fill: "red", shape: "dot", text: "expecting service in payload" });
 				return;
 			}
 
-			function writeCharacteristic(characteristic, done) {
-				if (characteristic.properties.join('').indexOf('write') < 0) {
-					done();
-					return;
-				}
-
-				node.status({ fill: "green", shape: "dot", text: "writing" });
-
-				var data = Buffer.from(msg.payload);
-				characteristic.write(data, false, function(error) {
-					if (error) {
-						node.status({ fill: "red", shape: "dot", text: "error writing" });
-						done();
-						return;
-					}
-					setTimeout(done, 500);
-					node.log("done writing to " + peripheral.address);
-				});
+			var service = noble._services[peripheral.id][msg._service];
+			if (!service) {
+				node.status({ fill: "red", shape: "dot", text: "expecting service in noble" });
+				return;
 			}
 
-			async.filter(msg._characteristics,
-				function(characteristic, done) {
-					done(null, !config.uuid || config.uuid && characteristic.uuid === config.uuid);
-				},
-				function(error, characteristics) {
-					async.eachSeries(characteristics, writeCharacteristic, function() {
-						node.status({});
-					});
+			var characteristic = noble._characteristics[peripheral.id][msg._service][config.uuid];
+			if (!characteristic) {
+				return;
+			}
+
+			if (characteristic.properties.join('').indexOf('write') < 0) {
+				return;
+			}
+
+			node.status({ fill: "green", shape: "dot", text: "writing" });
+
+			var data = Buffer.from(msg.payload);
+			characteristic.write(data, false, function(error) {
+				if (error) {
+					node.status({ fill: "red", shape: "dot", text: "error writing" });
+					return;
 				}
-			);
+				node.status({});
+			});
 		});
 	}
 	RED.nodes.registerType('characteristic out', WCharacteristicNode);

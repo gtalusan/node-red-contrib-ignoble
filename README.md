@@ -25,7 +25,7 @@ Connect a characteristic node to the service node.  This node will let you fish 
 After the characteric node has run, msg.payload will contain its data - this can be shunted to other nodes like MQTT, Twitter or a debug node.
 
 ## Example
-An example flow of two temperature sensors being polled every 30 minutes and characteristics exposed over Homebridge/MQTT.
+An example flow of two temperature sensors being polled every 30 minutes and characteristics exposed over Homebridge/MQTT.  A third SHT21 sensor will push its temperature (2a6e) when the characteristic changes.
 
 ![alt text](./example-poll.png "example poll flow")
 

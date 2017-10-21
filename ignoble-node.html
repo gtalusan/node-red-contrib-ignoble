@@ -149,7 +149,8 @@
 				value: ""
 			},
 			uuid: {
-				value: ""
+				value: "",
+				required: true
 			},
 			subscribe: {
 				value: false
@@ -180,7 +181,27 @@
 </script>
 
 <script type="text/x-red" data-help-name="characteristic">
-    <p>A BLE node that matches a service's characteristic by UUID.  Hook this up to a service! Remember, if you subscribe to a characteristic, it's helpful to set the peripheral timeout to 0!</p>
+    <p>A BLE node that matches a service's characteristic by UUID</p>
+
+    <h3>Inputs</h3>
+        <dl class="message-properties">
+            <dt>payload <span class="property-type">object</span>
+            </dt>
+            <dd> the output of a service node</dd>
+        </dl>
+    <h3>Outputs</h3>
+        <ol class="node-ports">
+	    <li>
+                <dl class="message-properties">
+		    <dt />
+                    <dd> this port is called when the characteristic has been read</dd>
+                </dl>
+            </li>
+        </ol>
+    <h3>Details</h3>
+	<p>Hook this up to a service!</p>
+	<p>If the characteristic is notifiable then <code>subscribe</code> to it and don't forget to set the peripheral timeout to 0.</p>
+	<p>Use the output port to daisy chain <code>characteristic</code> nodes so they can be read sequentially.</p>
 </script>
 
 <script type="text/javascript">
