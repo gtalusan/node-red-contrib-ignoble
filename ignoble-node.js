@@ -12,7 +12,7 @@ module.exports = function(RED) {
 
 		function scanStop() {
 			node.status({});
-			node.send({ _payload: 1 });
+			node.send({ payload: 1 });
 		}
 
 		node.on('input', function(msg) {
