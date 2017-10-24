@@ -4,7 +4,9 @@ A Node-Red BLE (Bluetooth Low Energy) central module.
 
 ## Prerequisites
 
-Only tested on a Raspberry Pi Zero W with a RedBear Nano 2 BLE
+Will work anywhere that [noble](https://github.com/sandeepmistry/noble) works.
+
+Tested with Raspberry Pi Zero W (CYW43438), Nano Pi NEO AIR (AP6212A), and Red Bear BLE Nano V2 (nRF52x).
 
 ## Installation
 
