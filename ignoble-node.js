@@ -282,14 +282,16 @@ module.exports = function(RED) {
 				return;
 			}
 
-			if (characteristic.properties.join('').indexOf('write') < 0) {
+			var p = characteristic.properties.join('');
+			if (p.indexOf('write') < 0) {
 				return;
 			}
 
+			var withoutResponse = p.indexOf('writeWithoutResponse') >= 0;
 			node.status({ fill: "green", shape: "dot", text: "writing" });
 
 			var data = Buffer.from(msg.payload);
-			characteristic.write(data, false, function(error) {
+			characteristic.write(data, withoutResponse, function(error) {
 				if (error) {
 					node.status({ fill: "red", shape: "dot", text: "error writing" });
 					return;
