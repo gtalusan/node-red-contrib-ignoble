@@ -1,4 +1,4 @@
-var noble = require('noble');
+var noble = require('@abandonware/noble');
 var async = require('async');
 
 module.exports = function(RED) {
